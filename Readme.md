@@ -1,14 +1,12 @@
 # 🌱 Smart Garden Controller & Environmental Monitoring System
 
-
-  STM32F407VET6 | ARM Cortex-M4 | Embedded C | STM32 HAL
-
+STM32F407VET6 | ARM Cortex-M4 | Embedded C | STM32 HAL
 
 An embedded smart garden system based on the **STM32F407VET6 microcontroller** that monitors environmental conditions and automatically controls irrigation, ventilation, and lighting.
 
-The system integrates multiple sensors, relay-based actuators, an SPI TFT display, real-time clock functionality, and a push-button interface. It supports both automatic and manual operating modes, with configurable environmental thresholds and built-in pump safety protection.
+The system integrates multiple sensors, relay-based actuators, an SPI TFT display, and a push-button interface. It supports both automatic and manual operating modes, with configurable environmental thresholds and built-in pump safety protection.
 
----
+* * *
 
 ## 📌 Table of Contents
 
@@ -26,7 +24,7 @@ The system integrates multiple sensors, relay-based actuators, an SPI TFT displa
 - [Future Improvements](#-future-improvements)
 - [Technical Skills Demonstrated](#-technical-skills-demonstrated)
 
----
+* * *
 
 ## 🌿 Project Overview
 
@@ -40,7 +38,7 @@ Users can interact with the system through four physical push buttons to configu
 
 ### System Architecture
 
-```text
+```
         ENVIRONMENTAL SENSORS
        ┌──────────────────────┐
        │                      │
@@ -65,9 +63,9 @@ Users can interact with the system through four physical push buttons to configu
        ┌───────┼──────────────┐
        │       │              │
        ▼       ▼              ▼
-    ILI9341  Push Buttons   RTC
-     LCD      UP/DOWN      Backup
-              SET/NEXT     Registers
+    ILI9341  Push Buttons   Flash
+     LCD      UP/DOWN      Settings
+              SET/NEXT     Storage
                │
                ▼
        ┌──────────────────────┐
@@ -79,7 +77,7 @@ Users can interact with the system through four physical push buttons to configu
         Pump     Fan      Light
 ```
 
----
+* * *
 
 ## ✨ Features
 
@@ -95,11 +93,11 @@ Users can interact with the system through four physical push buttons to configu
 
 The system automatically controls three external devices based on configurable environmental thresholds.
 
-| Parameter | Control Condition | Controlled Device |
-|---|---|---|
-| Soil Moisture | Below configured threshold | Water Pump |
-| Temperature | Above configured threshold | Fan |
-| Light Intensity | Below configured threshold | Grow Light |
+| Parameter       | Control Condition          | Controlled Device |
+|-----------------|----------------------------|-------------------|
+| Soil Moisture   | Below configured threshold | Water Pump        |
+| Temperature     | Above configured threshold | Fan               |
+| Light Intensity | Below configured threshold | Grow Light        |
 
 Hysteresis control is implemented to reduce frequent relay switching when sensor readings fluctuate around threshold values.
 
@@ -118,12 +116,12 @@ Hysteresis control is implemented to reduce frequent relay switching when sensor
 - Operating mode and actuator status display.
 - Button-based menu navigation and configuration.
 
-### 5. RTC and Configuration Storage
+### 5. Configuration Storage
 
-- RTC operation using an external 32.768 kHz LSE crystal.
-- Store system configuration in RTC Backup Registers.
-- Retain backup-domain data using a CR1220 battery.
-- Validate stored parameters using a configuration signature.
+- Store the threshold settings in the last Flash sector (sector 7) of the MCU.
+- Settings are retained when power is removed.
+- Flash is erased and written only when a changed setting is saved with the SET button.
+- Validate stored parameters using a signature and checksum, falling back to defaults if invalid.
 
 ### 6. Pump Safety Protection
 
@@ -140,24 +138,22 @@ Hysteresis control is implemented to reduce frequent relay switching when sensor
 - Sensor measurement debugging.
 - System event logging.
 
----
+* * *
 
 ## 🔧 Hardware Components
 
-| Component | Description | Interface |
-|---|---|---|
-| STM32F407VET6 | Main microcontroller | MCU |
-| DHT11 | Temperature and humidity sensor | GPIO |
-| HW-390 | Soil moisture sensor | ADC |
-| LM393 | Light detection module | ADC + GPIO |
-| ILI9341 | 3.2-inch TFT LCD | SPI2 |
-| Relay Module | Pump, fan, and light control | GPIO |
-| Push Buttons | User input interface | GPIO |
-| RTC | Real-time clock | Internal RTC |
-| CR1220 | RTC backup battery | Backup Domain |
-| ST-LINK V2 | Programming and debugging | SWD |
+| Component     | Description                     | Interface     |
+|---------------|---------------------------------|---------------|
+| STM32F407VET6 | Main microcontroller            | MCU           |
+| DHT11         | Temperature and humidity sensor | GPIO          |
+| HW-390        | Soil moisture sensor            | ADC           |
+| LM393         | Light detection module          | ADC + GPIO    |
+| ILI9341       | 3.2-inch TFT LCD                | SPI2          |
+| Relay Module  | Pump, fan, and light control    | GPIO          |
+| Push Buttons  | User input interface            | GPIO          |
+| ST-LINK V2    | Programming and debugging       | SWD           |
 
----
+* * *
 
 ## 📍 Hardware Pin Configuration
 
@@ -170,93 +166,81 @@ Hysteresis control is implemented to reduce frequent relay switching when sensor
 
 ### Sensor Interfaces
 
-| Signal | STM32 Pin | Peripheral Configuration |
-|---|---|---|
-| Soil Moisture Analog | PA0 | ADC1_IN0 |
-| Light Sensor Digital | PA2 | GPIO Input |
-| Light Sensor Analog | PA3 | ADC1_IN3 |
-| DHT11 Data | PD15 | GPIO Open-Drain / Input |
+| Signal               | STM32 Pin | Peripheral Configuration                                   |
+|----------------------|-----------|------------------------------------------------------------|
+| Soil Moisture Analog | PA0       | ADC1_IN0                                                   |
+| Light Sensor Digital | PA2       | GPIO Input                                                 |
+| Light Sensor Analog  | PA3       | ADC1_IN3                                                   |
+| DHT11 Data           | PD15      | GPIO Output Open-Drain (external 4.7 kΩ pull-up to 3.3 V)  |
+
+The analog sensors (HW-390, LM393) must be powered from **3.3 V** to keep their outputs within the ADC input range.
 
 ### Relay Outputs
 
-| Device | STM32 Pin | GPIO Configuration |
-|---|---|---|
-| Water Pump | PD7 | Output Push-Pull |
-| Fan | PD6 | Output Push-Pull |
-| Grow Light | PD5 | Output Push-Pull |
+| Device     | STM32 Pin | GPIO Configuration |
+|------------|-----------|--------------------|
+| Water Pump | PD7       | Output Push-Pull   |
+| Fan        | PD6       | Output Push-Pull   |
+| Grow Light | PD5       | Output Push-Pull   |
 
 **Initial output state:** All relay control outputs are configured to LOW (OFF), assuming an active-HIGH relay driver.
 
 ### TFT LCD – ILI9341 (SPI2)
 
-| LCD Signal | STM32 Pin | Configuration |
-|---|---|---|
-| SCK | PB13 | SPI2_SCK |
-| MISO | PB14 | SPI2_MISO |
-| MOSI | PB15 | SPI2_MOSI |
-| CS | PB12 | GPIO Output |
-| DC | PD8 | GPIO Output |
-| RESET | To be assigned | GPIO Output |
-| BACKLIGHT | Module dependent | GPIO / Power |
+| LCD Signal | STM32 Pin        | Configuration                       |
+|------------|------------------|-------------------------------------|
+| SCK        | PB13             | SPI2_SCK                            |
+| MISO       | PB14             | SPI2_MISO                           |
+| MOSI       | PB15             | SPI2_MOSI                           |
+| CS         | PB12             | GPIO Output                         |
+| DC         | PD8              | GPIO Output                         |
+| RESET      | NRST             | Shared with the MCU reset line      |
+| BACKLIGHT  | Module dependent | Powered from the module supply      |
 
 ### Push Buttons
 
-| Button | STM32 Pin | Configuration |
-|---|---|---|
-| UP | PE2 | GPIO Input |
-| DOWN | PE3 | GPIO Input |
-| SET | PE4 | GPIO Input |
-| NEXT | PE5 | GPIO Input |
+| Button | STM32 Pin | Configuration                                   |
+|--------|-----------|-------------------------------------------------|
+| UP     | PE2       | GPIO Input, external 10 kΩ pull-up (active-low) |
+| DOWN   | PE3       | GPIO Input, external 10 kΩ pull-up (active-low) |
+| SET    | PE4       | GPIO Input, external 10 kΩ pull-up (active-low) |
+| NEXT   | PE5       | GPIO Input, external 10 kΩ pull-up (active-low) |
 
 ### UART1
 
-| Signal | STM32 Pin |
-|---|---|
-| TX | PA9 |
-| RX | PA10 |
-| Baud Rate | 115200 |
+| Signal    | STM32 Pin |
+|-----------|-----------|
+| TX        | PA9       |
+| RX        | PA10      |
+| Baud Rate | 115200    |
 
 ### Clock and Debug Interfaces
 
-| Peripheral | Configuration |
-|---|---|
-| HSE | 8 MHz Crystal |
-| LSE | 32.768 kHz Crystal |
-| RTC Backup | CR1220 Battery |
-| SWDIO | PA13 |
-| SWCLK | PA14 |
+| Peripheral | Configuration      |
+|------------|--------------------|
+| HSE        | 8 MHz Crystal      |
+| SWDIO      | PA13               |
+| SWCLK      | PA14               |
 
----
+* * *
 
 ## 🏗️ Firmware Architecture
 
-The firmware follows a modular, layered architecture using STM32 HAL.
+The firmware is written with STM32 HAL and organized as a small set of source modules.
 
 The application is designed without an RTOS. Instead, periodic tasks are scheduled using a non-blocking time-based mechanism.
 
-### Software Layers
-
-| Layer | Responsibilities |
-|---|---|
-| Application Layer | Main application logic, operating modes, and system state management |
-| Service Layer | Sensor management, relay control, safety, configuration, and UI management |
-| Driver Layer | Low-level sensor, display, button, and peripheral drivers |
-| Hardware Layer | STM32F407VET6 and external hardware components |
-
 ### Firmware Modules
 
-| Module | Description |
-|---|---|
-| `sensor_manager` | Collects and processes environmental sensor data |
-| `control_manager` | Implements automatic and manual control logic |
-| `relay_manager` | Controls pump, fan, and light relay outputs |
-| `button_manager` | Handles button scanning and debouncing |
-| `ui_manager` | Manages LCD rendering and menu navigation |
-| `safety_manager` | Implements pump runtime and lockout protection |
-| `config_manager` | Handles configuration storage and retrieval |
-| `logger` | Provides UART-based debugging and event logging |
+| Module                | Description                                                                         |
+|-----------------------|-------------------------------------------------------------------------------------|
+| `app.c`               | Application logic: sensor processing, automatic/manual control, pump safety, button handling, UI pages, Flash configuration storage, UART logging |
+| `app_config.h`        | Sensor calibration, default thresholds, safety times, task intervals                |
+| `dht11.c`             | DHT11 driver (pulse timing with TIM6 at 1 µs)                                       |
+| `ili9341.c`           | ILI9341 SPI driver with text and rectangle drawing                                  |
+| `font5x7.c`           | 5x7 ASCII font                                                                      |
 
----
+* * *
 
 ## ⚙️ Operating Modes
 
@@ -264,11 +248,11 @@ The application is designed without an RTOS. Instead, periodic tasks are schedul
 
 In Automatic Mode, the controller continuously evaluates sensor measurements against configured thresholds.
 
-| Environmental Condition | System Action |
-|---|---|
-| Soil moisture below threshold | Activate water pump |
-| Temperature above threshold | Activate cooling fan |
-| Light intensity below threshold | Activate grow light |
+| Environmental Condition         | System Action        |
+|---------------------------------|----------------------|
+| Soil moisture below threshold   | Activate water pump  |
+| Temperature above threshold     | Activate cooling fan |
+| Light intensity below threshold | Activate grow light  |
 
 Hysteresis is applied to each control condition to improve system stability.
 
@@ -278,17 +262,17 @@ In Manual Mode, users directly control the three relay outputs through the physi
 
 Automatic control decisions are disabled while Manual Mode is active.
 
-Pump safety protection remains enabled regardless of the selected operating mode.
+The pump safety protection applies in Automatic Mode only. In Manual Mode the user is responsible for switching the pump off.
 
----
+* * *
 
 ## 🛡️ Pump Safety Mechanism
 
-A state machine is used to prevent excessive pump operation.
+A timer-based protection prevents excessive pump operation in Automatic Mode.
 
 ### Operating Sequence
 
-```text
+```
               ┌──────────┐
               │   IDLE   │
               └────┬─────┘
@@ -320,49 +304,47 @@ The mechanism uses non-blocking time management based on `HAL_GetTick()` instead
 
 This allows the firmware to continue handling sensor acquisition, button inputs, display updates, and other system functions during pump operation and lockout periods.
 
----
+* * *
 
 ## ⏱️ Task Scheduling
 
 The application uses a cooperative, non-blocking scheduler based on the STM32 HAL system tick.
 
-| Task | Execution Interval |
-|---|---:|
-| Button Scanning | 10 ms |
-| ADC Sampling | 100 ms |
-| Control Processing | 100 ms |
-| Pump Safety Monitoring | 10 ms |
-| DHT11 Acquisition | 2 seconds |
-| LCD Refresh | 200 ms |
-| UART Debug Logging | 1 second |
+| Task                              | Execution Interval |
+|-----------------------------------|-------------------:|
+| Button Scanning                   | 10 ms              |
+| ADC Sampling                      | 200 ms             |
+| Control Processing + Pump Safety  | 500 ms             |
+| DHT11 Acquisition                 | 2 seconds          |
+| LCD Refresh                       | 250 ms             |
+| UART Debug Logging                | 2 seconds          |
 
-These intervals are initial design targets and can be adjusted during system integration and performance testing.
+The intervals are defined in `app_config.h` and can be adjusted.
 
----
+* * *
 
 ## 💻 Development Environment
 
-| Tool / Technology | Purpose |
-|---|---|
-| STM32CubeMX | Peripheral configuration and code generation |
-| STM32CubeIDE / Keil MDK | Firmware development and compilation |
-| STM32 HAL | Hardware abstraction and peripheral drivers |
-| Embedded C | Firmware implementation |
-| ST-LINK V2 | Flash programming and debugging |
-| STM32CubeProgrammer | Firmware flashing and device management |
-| Serial Terminal | UART debugging and monitoring |
+| Tool / Technology       | Purpose                                      |
+|-------------------------|----------------------------------------------|
+| STM32CubeMX             | Peripheral configuration and code generation |
+| STM32CubeIDE / Keil MDK | Firmware development and compilation         |
+| STM32 HAL               | Hardware abstraction and peripheral drivers  |
+| Embedded C              | Firmware implementation                      |
+| ST-LINK V2              | Flash programming and debugging              |
+| STM32CubeProgrammer     | Firmware flashing and device management      |
+| Serial Terminal         | UART debugging and monitoring                |
 
 ### Clock Configuration
 
-| Clock Source | Frequency |
-|---|---:|
-| HSE | 8 MHz |
-| SYSCLK | 168 MHz |
-| LSE | 32.768 kHz |
+| Clock Source | Frequency  |
+|--------------|-----------:|
+| HSE          | 8 MHz      |
+| SYSCLK       | 168 MHz    |
 
 The clock tree is configured according to the STM32F407 operating limits and peripheral clock requirements.
 
----
+* * *
 
 ## 🚀 Getting Started
 
@@ -376,27 +358,19 @@ Verify all power supply connections and signal voltage levels before powering on
 
 1. Select `STM32F407VET6`.
 2. Configure the system clock to 168 MHz.
-3. Enable ADC1 and configure Channels 0 and 3.
+3. Enable ADC1 and configure Channels 0 and 3 (scan mode, 480-cycle sampling, DMA2 Stream 0 in circular mode).
 4. Enable SPI2 for the ILI9341 display.
 5. Enable USART1 at 115200 baud.
-6. Enable RTC and configure the LSE clock source.
+6. Enable TIM6 with Prescaler = 83 and Period = 65535 (1 µs tick for the DHT11).
 7. Configure GPIO pins according to the pin mapping.
 8. Enable Serial Wire Debug (SWD).
 9. Generate the STM32 HAL project.
 
-### 3. Firmware Development
+### 3. Firmware Integration
 
-Implement and integrate the following modules:
+Copy the application sources into `Core/Inc` and `Core/Src`, then call `App_Init()` once before the main loop and `App_Loop()` inside the main loop of `main.c`.
 
-- Sensor drivers.
-- Display driver.
-- Button driver.
-- Sensor management.
-- Automatic and manual control.
-- Relay management.
-- Pump safety state machine.
-- RTC configuration storage.
-- UART debugging.
+Adjust the sensor calibration values in `app_config.h` (`SOIL_RAW_DRY`, `SOIL_RAW_WET`, `LIGHT_INVERT`) after reading the raw values shown on the LCD.
 
 ### 4. Build and Flash
 
@@ -410,7 +384,7 @@ Implement and integrate the following modules:
 
 Connect a serial terminal to USART1 using the following settings:
 
-```text
+```
 Baud Rate: 115200
 Data Bits: 8
 Parity: None
@@ -420,56 +394,35 @@ Flow Control: None
 
 Monitor sensor measurements, operating modes, relay states, and safety events.
 
----
+* * *
 
 ## 📂 Project Structure
 
-```text
+```
 Smart_Garden/
 │
 ├── Core/
 │   ├── Inc/
+│   │   ├── app.h
+│   │   ├── app_config.h
+│   │   ├── dht11.h
+│   │   ├── ili9341.h
+│   │   └── font5x7.h
 │   └── Src/
+│       ├── main.c
+│       ├── app.c
+│       ├── dht11.c
+│       ├── ili9341.c
+│       └── font5x7.c
 │
-├── Drivers/
-│   ├── DHT11/
-│   │   ├── dht11.c
-│   │   └── dht11.h
-│   │
-│   ├── ILI9341/
-│   │   ├── ili9341.c
-│   │   └── ili9341.h
-│   │
-│   └── Buttons/
-│       ├── button.c
-│       └── button.h
-│
-├── Application/
-│   ├── app.c
-│   ├── sensor_manager.c
-│   ├── control_manager.c
-│   ├── relay_manager.c
-│   ├── button_manager.c
-│   ├── ui_manager.c
-│   ├── safety_manager.c
-│   └── config_manager.c
-│
-├── Debug/
-│   ├── logger.c
-│   └── logger.h
-│
-├── README.md
+├── Readme.md
 └── STM32F407VET6.ioc
 ```
 
-*Note: The directory structure represents the proposed firmware organization and can be adjusted to match the actual implementation.*
-
----
+* * *
 
 ## 🔮 Future Improvements
 
-- Implement SD Card data logging.
-- Add DMA-based ADC acquisition.
 - Improve sensor filtering and measurement stability.
 - Add sensor disconnection and fault detection.
 - Integrate an Independent Watchdog (IWDG).
@@ -478,7 +431,7 @@ Smart_Garden/
 - Implement MQTT communication for remote monitoring.
 - Develop a web-based environmental monitoring dashboard.
 
----
+* * *
 
 ## 🎯 Technical Skills Demonstrated
 
@@ -488,32 +441,28 @@ This project demonstrates practical embedded firmware development skills:
 - STM32F4 microcontroller architecture.
 - STM32CubeMX and STM32 HAL.
 - GPIO configuration and control.
-- ADC acquisition and sensor interfacing.
+- ADC acquisition with DMA and sensor interfacing.
 - SPI communication and TFT LCD driver development.
+- Timing-critical single-wire protocol (DHT11) using a hardware timer.
 - UART communication and debugging.
-- RTC and Backup Register management.
-- State Machine implementation.
+- Flash memory programming for persistent settings.
 - Non-blocking firmware design.
 - Hardware-software integration.
-- Modular firmware architecture.
 
----
+* * *
 
 ## 📋 Project Information
 
-| Category | Details |
-|---|---|
-| Project Name | Smart Garden Controller |
-| Microcontroller | STM32F407VET6 |
-| CPU Architecture | ARM Cortex-M4 |
-| Core Frequency | 168 MHz |
-| Programming Language | Embedded C |
-| Development Framework | STM32 HAL |
-| Configuration Tool | STM32CubeMX |
-| Operating System | Bare-metal (No RTOS) |
-| Display Interface | SPI2 |
-| Debug Interface | USART1 / SWD |
-| Project Domain | Embedded Systems / Smart Agriculture |
-
----
-
+| Category              | Details                              |
+|-----------------------|--------------------------------------|
+| Project Name          | Smart Garden Controller              |
+| Microcontroller       | STM32F407VET6                        |
+| CPU Architecture      | ARM Cortex-M4                        |
+| Core Frequency        | 168 MHz                              |
+| Programming Language  | Embedded C                           |
+| Development Framework | STM32 HAL                            |
+| Configuration Tool    | STM32CubeMX                          |
+| Operating System      | Bare-metal (No RTOS)                 |
+| Display Interface     | SPI2                                 |
+| Debug Interface       | USART1 / SWD                         |
+| Project Domain        | Embedded Systems / Smart Agriculture |
